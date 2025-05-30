@@ -20,7 +20,6 @@ export default function FrameMint() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const eventName = "Monad Blitz BLR"
   const eventSubtitle = "EXCLUSIVE ACCESS"
-  const [photoHistory, setPhotoHistory] = useState<string[]>([])
   const [isMinting, setIsMinting] = useState(false)
 
   useEffect(() => {
@@ -166,26 +165,6 @@ export default function FrameMint() {
       setStream(null);
     }
   }, [address, stream]);
-
-  useEffect(() => {
-    if (address) {
-      const key = `framemint-history-${address}`;
-      const saved = localStorage.getItem(key);
-      setPhotoHistory(saved ? JSON.parse(saved) : []);
-    } else {
-      setPhotoHistory([]);
-    }
-  }, [address]);
-
-  useEffect(() => {
-    if (capturedImage && address && showPreview) {
-      const key = `framemint-history-${address}`;
-      const updated = [capturedImage, ...photoHistory.filter(img => img !== capturedImage)].slice(0, 12);
-      setPhotoHistory(updated);
-      localStorage.setItem(key, JSON.stringify(updated));
-    }
-    // eslint-disable-next-line
-  }, [capturedImage, address, showPreview]);
 
   if (!address) {
     return (
@@ -363,25 +342,6 @@ export default function FrameMint() {
                 </div>
               </div>
             </Card>
-
-            {address && photoHistory.length > 0 && (
-              <Card className="mt-6 p-4 bg-white/10 backdrop-blur-xl border-white/20 shadow-2xl">
-                <h3 className="text-lg font-semibold text-white mb-2">Your Photo History</h3>
-                <div className="flex flex-wrap gap-3">
-                  {photoHistory.map((img, idx) => (
-                    <a
-                      key={idx}
-                      href={`https://testnet.monadexplorer.com/`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block border-2 border-transparent hover:border-yellow-400 rounded-lg overflow-hidden transition-shadow shadow-md"
-                    >
-                      <img src={img} alt={`History ${idx+1}`} className="w-24 h-16 object-cover" />
-                    </a>
-                  ))}
-                </div>
-              </Card>
-            )}
           </div>
 
           {/* Info Panel */}
