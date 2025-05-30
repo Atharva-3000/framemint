@@ -3,9 +3,9 @@ import "./globals.css";
 import { headers } from "next/headers";
 import ContextProvider from "@/provider/AppProvider";
 export const metadata: Metadata = {
-  title: "v0 App",
-  description: "Created with v0",
-  generator: "v0.dev",
+  title: "Monad Blitz",
+  description: "Created with LOVE by Monad",
+  generator: "Monad",
 };
 
 export default async function RootLayout({

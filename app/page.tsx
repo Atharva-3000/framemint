@@ -12,7 +12,6 @@ import { generateImage } from "@/utils/img-uploading"
 
 export default function FrameMint() {
   const {address} = useAccount();
-  const [isConnected, setIsConnected] = useState(address? true : false)
   const [stream, setStream] = useState<MediaStream | null>(null)
   const [capturedImage, setCapturedImage] = useState<string | null>(null)
   const [isCapturing, setIsCapturing] = useState(false)
@@ -21,6 +20,8 @@ export default function FrameMint() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const eventName = "Monad Blitz BLR"
   const eventSubtitle = "EXCLUSIVE ACCESS"
+  const [photoHistory, setPhotoHistory] = useState<string[]>([])
+  const [isMinting, setIsMinting] = useState(false)
 
   useEffect(() => {
     return () => {
@@ -68,42 +69,36 @@ export default function FrameMint() {
     const bannerHeight = canvas.height * 0.12
     const bannerY = canvas.height * 0.75
 
-    // Create gradient for banner
-    const gradient = ctx.createLinearGradient(0, bannerY, canvas.width, bannerY + bannerHeight)
-    gradient.addColorStop(0, "rgba(255, 215, 0, 0.95)")
-    gradient.addColorStop(0.5, "rgba(255, 193, 7, 0.95)")
-    gradient.addColorStop(1, "rgba(255, 215, 0, 0.95)")
-
-    // Save context for rotation
+    // Banner background (solid purple)
     ctx.save()
-
-    // Rotate the banner slightly
     ctx.translate(canvas.width / 2, bannerY + bannerHeight / 2)
     ctx.rotate((-3 * Math.PI) / 180) // -3 degrees
-
-    // Draw banner background
-    ctx.fillStyle = gradient
+    ctx.fillStyle = "#836EF9"
     ctx.fillRect(-canvas.width / 2, -bannerHeight / 2, canvas.width, bannerHeight)
 
-    // Add border stripes
-    ctx.fillStyle = "rgba(0, 0, 0, 0.3)"
-    for (let i = 0; i < canvas.width; i += 40) {
-      ctx.fillRect(-canvas.width / 2 + i, -bannerHeight / 2, 20, bannerHeight)
+    // Add diagonal lines pattern
+    ctx.strokeStyle = "rgba(255,255,255,0.15)"
+    ctx.lineWidth = 3
+    const spacing = 24
+    for (let x = -canvas.width / 2 - bannerHeight; x < canvas.width / 2 + bannerHeight; x += spacing) {
+      ctx.beginPath()
+      ctx.moveTo(x, -bannerHeight / 2)
+      ctx.lineTo(x + bannerHeight, bannerHeight / 2)
+      ctx.stroke()
     }
 
-    // Add text
-    ctx.fillStyle = "#000"
-    ctx.font = `bold ${bannerHeight * 0.35}px "Inter", sans-serif`
+    // Add text: 'Monad Blitz'
+    ctx.fillStyle = "#fff"
+    ctx.font = `bold ${bannerHeight * 0.45}px 'Inter', sans-serif`
     ctx.textAlign = "center"
-    ctx.fillText(eventName, 0, bannerHeight * 0.1)
-
-    ctx.font = `${bannerHeight * 0.2}px "Inter", sans-serif`
-    ctx.fillText(eventSubtitle, 0, bannerHeight * 0.35)
-
+    ctx.textBaseline = "middle"
+    ctx.shadowColor = "rgba(0,0,0,0.18)"
+    ctx.shadowBlur = 6
+    ctx.fillText("Monad Blitz", 0, 0)
+    ctx.shadowBlur = 0
     ctx.restore()
 
-    const imageDataUrl = canvas.toDataURL("image/png");
-   
+    const imageDataUrl = canvas.toDataURL("image/png")
     setCapturedImage(imageDataUrl)
     setShowPreview(true)
 
@@ -112,7 +107,7 @@ export default function FrameMint() {
       stream.getTracks().forEach((track) => track.stop())
       setStream(null)
     }
-  }, [stream, eventName, eventSubtitle])
+  }, [stream])
 
   const retakePhoto = () => {
     setCapturedImage(null)
@@ -120,13 +115,9 @@ export default function FrameMint() {
     startCamera()
   }
 
-
-
-
   const connectWallet = async () => {
     setIsCapturing(true)
     setTimeout(() => {
-      setIsConnected(true)
       setIsCapturing(false)
       startCamera()
     }, 2000)
@@ -137,7 +128,7 @@ export default function FrameMint() {
       alert("No image captured!")
       return
     }
-  
+    setIsMinting(true);
     try {
       console.log("Minting photo...",address)
       const base64String = capturedImage.split(",")[1];
@@ -145,31 +136,64 @@ export default function FrameMint() {
       console.log("Image generation result:", result)
       if (!result) {
         alert("Failed to upload image or metadata to IPFS.")
+        setIsMinting(false);
         return
       }
-      
       if(result.nftIpfsUrl){
         await mintWithContract(result.nftIpfsUrl);
         console.log("NFT Metadata IPFS URL:", result.nftIpfsUrl)
         alert(`NFT ready to mint! Metadata IPFS URL:\n${result.nftIpfsUrl}`)
       }else{
+        setIsMinting(false);
         return ;
       }
-  
-
     } catch (err) {
       console.error("Error minting photo:", err)
       alert("Something went wrong while minting.")
     }
+    setIsMinting(false);
   }
 
-  if (!isConnected) {
+  useEffect(() => {
+    if (address && !showPreview && !stream) {
+      startCamera();
+    }
+  }, [address, showPreview, stream, startCamera]);
+
+  useEffect(() => {
+    if (!address && stream) {
+      stream.getTracks().forEach((track) => track.stop());
+      setStream(null);
+    }
+  }, [address, stream]);
+
+  useEffect(() => {
+    if (address) {
+      const key = `framemint-history-${address}`;
+      const saved = localStorage.getItem(key);
+      setPhotoHistory(saved ? JSON.parse(saved) : []);
+    } else {
+      setPhotoHistory([]);
+    }
+  }, [address]);
+
+  useEffect(() => {
+    if (capturedImage && address && showPreview) {
+      const key = `framemint-history-${address}`;
+      const updated = [capturedImage, ...photoHistory.filter(img => img !== capturedImage)].slice(0, 12);
+      setPhotoHistory(updated);
+      localStorage.setItem(key, JSON.stringify(updated));
+    }
+    // eslint-disable-next-line
+  }, [capturedImage, address, showPreview]);
+
+  if (!address) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4">
         <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fillRule='evenodd'%3E%3Cg fill='%239C92AC' fillOpacity='0.05'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-20"></div>
 
         <Card className="w-full max-w-md p-8 bg-white/10 backdrop-blur-xl border-white/20 shadow-2xl">
-          <div className="text-center space-y-6">
+          <div className="text-center space-y-6 flex flex-col items-center justify-center min-h-[400px]">
             <div className="space-y-2">
               <div className="flex items-center justify-center space-x-2 mb-4">
                 <div className="w-8 h-8 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-lg flex items-center justify-center">
@@ -310,9 +334,19 @@ export default function FrameMint() {
                           <Button
                             onClick={mintPhoto}
                             className="bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-black font-semibold"
+                            disabled={isMinting}
                           >
-                            <Sparkles className="w-4 h-4 mr-2" />
-                            Mint NFT
+                            {isMinting ? (
+                              <div className="flex items-center space-x-2">
+                                <div className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin"></div>
+                                <span>Minting...</span>
+                              </div>
+                            ) : (
+                              <>
+                                <Sparkles className="w-4 h-4 mr-2" />
+                                Mint NFT
+                              </>
+                            )}
                           </Button>
                         </div>
                       )}
@@ -329,6 +363,25 @@ export default function FrameMint() {
                 </div>
               </div>
             </Card>
+
+            {address && photoHistory.length > 0 && (
+              <Card className="mt-6 p-4 bg-white/10 backdrop-blur-xl border-white/20 shadow-2xl">
+                <h3 className="text-lg font-semibold text-white mb-2">Your Photo History</h3>
+                <div className="flex flex-wrap gap-3">
+                  {photoHistory.map((img, idx) => (
+                    <a
+                      key={idx}
+                      href={`https://testnet.monadexplorer.com/`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block border-2 border-transparent hover:border-yellow-400 rounded-lg overflow-hidden transition-shadow shadow-md"
+                    >
+                      <img src={img} alt={`History ${idx+1}`} className="w-24 h-16 object-cover" />
+                    </a>
+                  ))}
+                </div>
+              </Card>
+            )}
           </div>
 
           {/* Info Panel */}
@@ -350,17 +403,18 @@ export default function FrameMint() {
             {/* Banner Preview */}
             <Card className="p-6 bg-white/10 backdrop-blur-xl border-white/20">
               <h3 className="text-lg font-semibold text-white mb-4">Banner Preview</h3>
-              <div className="relative bg-gradient-to-r from-yellow-400 to-orange-500 rounded-lg p-4 transform -rotate-2 shadow-lg">
-                <div
-                  className="absolute inset-0 bg-black/20 rounded-lg"
-                  style={{
-                    backgroundImage:
-                      "repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(0,0,0,0.1) 10px, rgba(0,0,0,0.1) 20px)",
-                  }}
-                ></div>
-                <div className="relative text-center">
-                  <div className="font-bold text-black text-sm">{eventName}</div>
-                  <div className="text-black/80 text-xs">{eventSubtitle}</div>
+              <div className="relative rounded-lg p-4 transform -rotate-2 shadow-lg flex items-center justify-center min-h-[80px]" style={{ background: '#836EF9' }}>
+                {/* Diagonal lines pattern */}
+                <svg className="absolute inset-0 w-full h-full rounded-lg" style={{ zIndex: 0 }} xmlns="http://www.w3.org/2000/svg">
+                  <defs>
+                    <pattern id="diagonalLines" patternUnits="userSpaceOnUse" width="24" height="24" patternTransform="rotate(45)">
+                      <rect x="0" y="0" width="8" height="24" fill="white" fillOpacity="0.13" />
+                    </pattern>
+                  </defs>
+                  <rect width="100%" height="100%" fill="url(#diagonalLines)" />
+                </svg>
+                <div className="relative z-10 w-full flex items-center justify-center">
+                  <span className="font-bold text-white text-lg md:text-xl drop-shadow-lg tracking-wide" style={{letterSpacing: '0.04em'}}>Monad Blitz</span>
                 </div>
               </div>
             </Card>
