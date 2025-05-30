@@ -140,9 +140,8 @@ export default function FrameMint() {
   
     try {
       console.log("Minting photo...",address)
-      const imageBuffer = fromDataURLtoBuffer(capturedImage)
-      console.log("Image buffer created:", imageBuffer)
-      const result = await generateImage(imageBuffer)
+      const base64String = capturedImage.split(",")[1];
+      const result = await generateImage(base64String);
       console.log("Image generation result:", result)
       if (!result) {
         alert("Failed to upload image or metadata to IPFS.")
