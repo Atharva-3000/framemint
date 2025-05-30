@@ -5,16 +5,20 @@ import { Camera, RotateCcw, Wallet, Zap, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { ConnectButton } from "@/components/ConnectWallet"
+import { useAccount } from "wagmi"
+import { fromDataURLtoBuffer, mintWithContract } from "@/lib/utils"
+import { generateImage } from "@/utils/img-uploading"
 
 export default function FrameMint() {
-  const [isConnected, setIsConnected] = useState(false)
+  const {address} = useAccount();
+  const [isConnected, setIsConnected] = useState(address? true : false)
   const [stream, setStream] = useState<MediaStream | null>(null)
   const [capturedImage, setCapturedImage] = useState<string | null>(null)
   const [isCapturing, setIsCapturing] = useState(false)
   const [showPreview, setShowPreview] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
-
   const eventName = "Monad Blitz BLR"
   const eventSubtitle = "EXCLUSIVE ACCESS"
 
@@ -98,7 +102,8 @@ export default function FrameMint() {
 
     ctx.restore()
 
-    const imageDataUrl = canvas.toDataURL("image/png")
+    const imageDataUrl = canvas.toDataURL("image/png");
+   
     setCapturedImage(imageDataUrl)
     setShowPreview(true)
 
@@ -115,8 +120,10 @@ export default function FrameMint() {
     startCamera()
   }
 
+
+
+
   const connectWallet = async () => {
-    // Simulate wallet connection
     setIsCapturing(true)
     setTimeout(() => {
       setIsConnected(true)
@@ -125,9 +132,36 @@ export default function FrameMint() {
     }, 2000)
   }
 
-  const mintPhoto = () => {
-    // This would integrate with smart contracts
-    alert("Minting functionality would be implemented here!")
+  const mintPhoto = async () => {
+    if (!capturedImage || !address) {
+      alert("No image captured!")
+      return
+    }
+  
+    try {
+      console.log("Minting photo...",address)
+      const imageBuffer = fromDataURLtoBuffer(capturedImage)
+      console.log("Image buffer created:", imageBuffer)
+      const result = await generateImage(imageBuffer)
+      console.log("Image generation result:", result)
+      if (!result) {
+        alert("Failed to upload image or metadata to IPFS.")
+        return
+      }
+      
+      if(result.nftIpfsUrl){
+        await mintWithContract(result.nftIpfsUrl);
+        console.log("NFT Metadata IPFS URL:", result.nftIpfsUrl)
+        alert(`NFT ready to mint! Metadata IPFS URL:\n${result.nftIpfsUrl}`)
+      }else{
+        return ;
+      }
+  
+
+    } catch (err) {
+      console.error("Error minting photo:", err)
+      alert("Something went wrong while minting.")
+    }
   }
 
   if (!isConnected) {
@@ -181,23 +215,7 @@ export default function FrameMint() {
               </div>
             </div>
 
-            <Button
-              onClick={connectWallet}
-              disabled={isCapturing}
-              className="w-full bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-black font-semibold py-3 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg"
-            >
-              {isCapturing ? (
-                <div className="flex items-center space-x-2">
-                  <div className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin"></div>
-                  <span>Connecting...</span>
-                </div>
-              ) : (
-                <div className="flex items-center space-x-2">
-                  <Wallet className="w-5 h-5" />
-                  <span>Connect Wallet</span>
-                </div>
-              )}
-            </Button>
+            <ConnectButton/>
           </div>
         </Card>
       </div>
@@ -225,7 +243,7 @@ export default function FrameMint() {
 
           <Badge variant="secondary" className="bg-green-400/20 text-green-400 border-green-400/30">
             <div className="w-2 h-2 bg-green-400 rounded-full mr-2"></div>
-            Wallet Connected
+            <ConnectButton/>
           </Badge>
         </div>
 
