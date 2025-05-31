@@ -18,7 +18,7 @@ export default function FrameMint() {
   const [showPreview, setShowPreview] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const eventName = "Monad Blitz BLR"
+  const eventName = "Monad Blitz Bangalore"
   const eventSubtitle = "EXCLUSIVE ACCESS"
   const [isMinting, setIsMinting] = useState(false)
 
@@ -93,7 +93,7 @@ export default function FrameMint() {
     ctx.textBaseline = "middle"
     ctx.shadowColor = "rgba(0,0,0,0.18)"
     ctx.shadowBlur = 6
-    ctx.fillText("Monad Blitz", 0, 0)
+    ctx.fillText("Monad Blitz Bangalore", 0, 0)
     ctx.shadowBlur = 0
     ctx.restore()
 

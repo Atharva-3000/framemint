@@ -13,7 +13,8 @@ export const mintWithContract = async (metadataUrl: string) => {
     NFT_ADDRESS,
     NFT_ABI,
     signer
-  )
+  );
+  console.log("mint metadat",metadataUrl);
 
   const tx = await nftContract.mintNFT(metadataUrl);
   await tx.wait()
